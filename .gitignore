@@ -40,3 +40,4 @@ components.d.ts
 *.sw?
 .nvmdrc
 *.zip
+.temp/
