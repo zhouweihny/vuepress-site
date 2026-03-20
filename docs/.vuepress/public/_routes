@@ -1,0 +1,17 @@
+/* global 200 */
+# 所有页面返回 200
+/index.html   200
+/guide/*      200
+/jquery/*     200
+/tinychart-demo.html   200
+/tinychart-guide.html  200
+/amap-portable-guide.html   200
+/cesium-portable-guide.html 200
+/mixin-guide.html      200
+
+# 静态资源目录
+/libs/*      200
+/assets/*    200
+
+# 默认兜底
+/*           200
