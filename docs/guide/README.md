@@ -1,11 +1,13 @@
 # 指南
 
-这是指南页面的内容。
+欢迎来到指南页面。这里包含了一些实用的教程和文档。
 
-## 基本用法
+## 文档列表
 
-VuePress 2 是一个静态网站生成器，基于 Vue.js。
+- [VuePress 2 部署完全指南](./部署指南.md) - 从零开始使用 Cloudflare Pages + GitHub 免费部署你的网站
+- [VuePress 入门](./) - 基本用法和配置说明
 
-## 更多信息
+## 快速链接
 
-访问 [VuePress 官方文档](https://v2.vuepress.vuejs.org/) 了解更多。
+- [jQuery 教程](../../jquery/) - 如果你在找 jQuery 学习资料，点这里
+- [VuePress 官方文档](https://v2.vuepress.vuejs.org/)

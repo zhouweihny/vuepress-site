@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TinyChart Demo - ECharts 图表在线演示</title>
+  <script src="./libs/echarts.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .container { display: flex; height: 100vh; }
+
+    /* 左侧导航 */
+    .sidebar {
+      width: 250px;
+      background: #252526;
+      border-right: 1px solid #3e3e42;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .sidebar-title {
+      padding: 15px 20px;
+      font-size: 14px;
+      font-weight: bold;
+      color: #fff;
+      background: #1e1e1e;
+      border-bottom: 1px solid #3e3e42;
+    }
+    .nav-item {
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #969696;
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover { background: #2a2d2e; color: #fff; }
+    .nav-item.active {
+      background: #1e1e1e;
+      color: #007acc;
+      border-left-color: #007acc;
+    }
+    .nav-group {
+      padding: 8px 20px;
+      font-size: 12px;
+      color: #666;
+      background: #252526;
+      border-top: 1px solid #3e3e42;
+      border-bottom: 1px solid #3e3e42;
+      margin-top: 5px;
+    }
+
+    /* 中间代码区 */
+    .code-panel {
+      width: 35%;
+      background: #252526;
+      border-right: 1px solid #3e3e42;
+      display: flex;
+      flex-direction: column;
+    }
+    .code-header {
+      padding: 10px 20px;
+      background: #1e1e1e;
+      border-bottom: 1px solid #3e3e42;
+      font-size: 13px;
+      color: #969696;
+    }
+    .code-area {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    .code-area textarea {
+      width: 100%;
+      height: 100%;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      border: none;
+      padding: 20px;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+      tab-size: 2;
+    }
+
+    /* 右侧预览区 */
+    .preview-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+    }
+    .preview-header {
+      padding: 10px 20px;
+      background: #f5f5f5;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 14px;
+      color: #333;
+      font-weight: 500;
+    }
+    .preview-desc {
+      padding: 8px 20px;
+      background: #fafafa;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 12px;
+      color: #666;
+    }
+    .chart-container {
+      flex: 1;
+      position: relative;
+      background: #fff;
+    }
+    .chart-container #chart {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 滚动条 */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #1e1e1e; }
+    ::-webkit-scrollbar-thumb { background: #424242; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4e4e4e; }
+
+    /* 错误提示 */
+    .error {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #f44336;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 4px;
+      display: none;
+      z-index: 1000;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 左侧导航 -->
+    <div class="sidebar">
+      <div class="sidebar-title">📊 ECharts 示例集</div>
+      <div id="nav-container"></div>
+    </div>
+
+    <!-- 中间代码 -->
+    <div class="code-panel">
+      <div class="code-header">
+        <span id="chart-name">示例代码</span>
+      </div>
+      <div class="code-area">
+        <textarea id="code-editor" spellcheck="false"></textarea>
+      </div>
+    </div>
+
+    <!-- 右侧预览 -->
+    <div class="preview-panel">
+      <div class="preview-header" id="preview-title">图表预览</div>
+      <div class="preview-desc" id="preview-desc">选择一个图表查看效果</div>
+      <div class="chart-container">
+        <div id="chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="error" id="error"></div>
+
+  <script>
+    const CHART_TYPES = {
+      '柱状图': {
+        desc: '柱状图用于展示不同类别的数值对比',
+        items: {
+          '基础柱状图': {
+            code: `// 基础柱状图
+const option = {
+  title: { text: '月度销售额', left: 'center' },
+  tooltip: { trigger: 'axis' },
+  xAxis: { type: 'category', data: ['1月','2月','3月','4月','5月','6月'] },
+  yAxis: { type: 'value', name: '万元' },
+  series: [{
+    type: 'bar',
+    data: [120, 200, 150, 80, 70, 110],
+    itemStyle: { color: '#5470c6' }
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '月度销售额', left: 'center' },
+              tooltip: { trigger: 'axis' },
+              xAxis: { type: 'category', data: ['1月','2月','3月','4月','5月','6月'] },
+              yAxis: { type: 'value', name: '万元' },
+              series: [{ type: 'bar', data: [120, 200, 150, 80, 70, 110], itemStyle: { color: '#5470c6' } }]
+            })
+          },
+          '横向柱状图': {
+            code: `// 横向柱状图
+const option = {
+  title: { text: '各类型产品销量', left: 'center' },
+  tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+  xAxis: { type: 'value', name: '销量' },
+  yAxis: { type: 'category', data: ['手机','电脑','平板','耳机','手表'] },
+  series: [{
+    type: 'bar',
+    data: [1200, 800, 600, 400, 300],
+    itemStyle: { color: '#91cc75' }
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '各类型产品销量', left: 'center' },
+              tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+              xAxis: { type: 'value', name: '销量' },
+              yAxis: { type: 'category', data: ['手机','电脑','平板','耳机','手表'] },
+              series: [{ type: 'bar', data: [1200, 800, 600, 400, 300], itemStyle: { color: '#91cc75' } }]
+            })
+          },
+          '堆叠柱状图': {
+            code: `// 堆叠柱状图
+const option = {
+  title: { text: '季度销售额', left: 'center' },
+  tooltip: { trigger: 'axis' },
+  legend: { data: ['线上','线下'], top: 30 },
+  xAxis: { type: 'category', data: ['Q1','Q2','Q3','Q4'] },
+  yAxis: { type: 'value' },
+  series: [
+    { name: '线上', type: 'bar', stack: 'total', data: [320, 420, 380, 520] },
+    { name: '线下', type: 'bar', stack: 'total', data: [200, 280, 320, 380] }
+  ]
+}`,
+            getOption: () => ({
+              title: { text: '季度销售额', left: 'center' },
+              tooltip: { trigger: 'axis' },
+              legend: { data: ['线上','线下'], top: 30 },
+              xAxis: { type: 'category', data: ['Q1','Q2','Q3','Q4'] },
+              yAxis: { type: 'value' },
+              series: [
+                { name: '线上', type: 'bar', stack: 'total', data: [320, 420, 380, 520] },
+                { name: '线下', type: 'bar', stack: 'total', data: [200, 280, 320, 380] }
+              ]
+            })
+          },
+          '渐变柱状图': {
+            code: `// 渐变柱状图
+const option = {
+  title: { text: '销售趋势', left: 'center' },
+  xAxis: { type: 'category', data: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] },
+  yAxis: { type: 'value' },
+  series: [{
+    type: 'bar',
+    data: [120, 200, 150, 80, 70, 110, 130],
+    itemStyle: {
+      color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+        { offset: 0, color: '#83bff6' },
+        { offset: 0.5, color: '#188df0' },
+        { offset: 1, color: '#188df0' }
+      ])
+    }
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '销售趋势', left: 'center' },
+              xAxis: { type: 'category', data: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] },
+              yAxis: { type: 'value' },
+              series: [{
+                type: 'bar',
+                data: [120, 200, 150, 80, 70, 110, 130],
+                itemStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: '#83bff6' },
+                    { offset: 0.5, color: '#188df0' },
+                    { offset: 1, color: '#188df0' }
+                  ])
+                }
+              }]
+            })
+          },
+          '带标记柱状图': {
+            code: `// 带标记点的柱状图
+const option = {
+  title: { text: '业绩排名', left: 'center' },
+  xAxis: { type: 'category', data: ['A','B','C','D','E'] },
+  yAxis: { type: 'value' },
+  series: [{
+    type: 'bar',
+    data: [120, 200, 150, 80, 70],
+    itemStyle: { color: '#ee6666' },
+    markPoint: {
+      data: [
+        { type: 'max', name: '最大值' },
+        { type: 'min', name: '最小值' }
+      ]
+    },
+    markLine: {
+      data: [{ type: 'average', name: '平均值' }]
+    }
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '业绩排名', left: 'center' },
+              xAxis: { type: 'category', data: ['A','B','C','D','E'] },
+              yAxis: { type: 'value' },
+              series: [{
+                type: 'bar',
+                data: [120, 200, 150, 80, 70],
+                itemStyle: { color: '#ee6666' },
+                markPoint: { data: [{ type: 'max' }, { type: 'min' }] },
+                markLine: { data: [{ type: 'average' }] }
+              }]
+            })
+          }
+        }
+      },
+
+      '折线图': {
+        desc: '折线图用于展示数据随时间或类别的趋势变化',
+        items: {
+          '基础折线图': {
+            code: `// 基础折线图
+const option = {
+  title: { text: '温度变化', left: 'center' },
+  tooltip: { trigger: 'axis' },
+  xAxis: { type: 'category', boundaryGap: false, data: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] },
+  yAxis: { type: 'value' },
+  series: [{ type: 'line', data: [22, 24, 26, 23, 25, 27, 28] }]
+}`,
+            getOption: () => ({
+              title: { text: '温度变化', left: 'center' },
+              tooltip: { trigger: 'axis' },
+              xAxis: { type: 'category', boundaryGap: false, data: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] },
+              yAxis: { type: 'value' },
+              series: [{ type: 'line', data: [22, 24, 26, 23, 25, 27, 28] }]
+            })
+          },
+          '平滑曲线': {
+            code: `// 平滑曲线
+const option = {
+  title: { text: '平滑趋势线', left: 'center' },
+  xAxis: { type: 'category', boundaryGap: false, data: ['Jan','Feb','Mar','Apr','May','Jun'] },
+  yAxis: { type: 'value' },
+  series: [{
+    type: 'line',
+    smooth: true,
+    lineStyle: { width: 3 },
+    data: [100, 180, 150, 200, 250, 300]
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '平滑趋势线', left: 'center' },
+              xAxis: { type: 'category', boundaryGap: false, data: ['Jan','Feb','Mar','Apr','May','Jun'] },
+              yAxis: { type: 'value' },
+              series: [{ type: 'line', smooth: true, lineStyle: { width: 3 }, data: [100, 180, 150, 200, 250, 300] }]
+            })
+          },
+          '阶梯折线图': {
+            code: `// 阶梯折线图
+const option = {
+  title: { text: '阶梯图示例', left: 'center' },
+  xAxis: { type: 'category', data: ['A','B','C','D','E'] },
+  yAxis: { type: 'value' },
+  series: [{
+    type: 'line',
+    step: 'end',
+    data: [100, 200, 150, 300, 250],
+    lineStyle: { width: 2 }
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '阶梯图示例', left: 'center' },
+              xAxis: { type: 'category', data: ['A','B','C','D','E'] },
+              yAxis: { type: 'value' },
+              series: [{ type: 'line', step: 'end', data: [100, 200, 150, 300, 250], lineStyle: { width: 2 } }]
+            })
+          },
+          '面积折线图': {
+            code: `// 面积折线图
+const option = {
+  title: { text: '活跃用户趋势', left: 'center' },
+  xAxis: { type: 'category', boundaryGap: false, data: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] },
+  yAxis: { type: 'value' },
+  series: [{
+    type: 'line',
+    smooth: true,
+    areaStyle: { color: 'rgba(24, 144, 255, 0.3)' },
+    lineStyle: { color: '#1890ff' },
+    data: [820, 932, 901, 934, 1290, 1330, 1320]
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '活跃用户趋势', left: 'center' },
+              xAxis: { type: 'category', boundaryGap: false, data: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] },
+              yAxis: { type: 'value' },
+              series: [{
+                type: 'line',
+                smooth: true,
+                areaStyle: { color: 'rgba(24, 144, 255, 0.3)' },
+                lineStyle: { color: '#1890ff' },
+                data: [820, 932, 901, 934, 1290, 1330, 1320]
+              }]
+            })
+          },
+          '渐变面积图': {
+            code: `// 渐变面积图
+const option = {
+  title: { text: '收入增长', left: 'center' },
+  xAxis: { type: 'category', boundaryGap: false, data: ['Q1','Q2','Q3','Q4'] },
+  yAxis: { type: 'value' },
+  series: [{
+    type: 'line',
+    smooth: true,
+    data: [400, 600, 800, 1200],
+    areaStyle: {
+      color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+        { offset: 0, color: 'rgba(255, 158, 68, 0.8)' },
+        { offset: 1, color: 'rgba(255, 70, 131, 0.1)' }
+      ])
+    },
+    lineStyle: { color: '#ff6584' }
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '收入增长', left: 'center' },
+              xAxis: { type: 'category', boundaryGap: false, data: ['Q1','Q2','Q3','Q4'] },
+              yAxis: { type: 'value' },
+              series: [{
+                type: 'line',
+                smooth: true,
+                data: [400, 600, 800, 1200],
+                areaStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: 'rgba(255, 158, 68, 0.8)' },
+                    { offset: 1, color: 'rgba(255, 70, 131, 0.1)' }
+                  ])
+                },
+                lineStyle: { color: '#ff6584' }
+              }]
+            })
+          },
+          '柱线混合': {
+            code: `// 柱线混合图
+const option = {
+  title: { text: '销售额与利润率', left: 'center' },
+  tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+  legend: { data: ['销售额','利润率'], top: 30 },
+  xAxis: { type: 'category', data: ['1月','2月','3月','4月','5月','6月'] },
+  yAxis: [
+    { type: 'value', name: '销售额', position: 'left' },
+    { type: 'value', name: '利润率%', position: 'right' }
+  ],
+  series: [
+    { name: '销售额', type: 'bar', data: [200, 300, 250, 400, 350, 450] },
+    { name: '利润率', type: 'line', yAxisIndex: 1, data: [20, 28, 25, 32, 30, 35] }
+  ]
+}`,
+            getOption: () => ({
+              title: { text: '销售额与利润率', left: 'center' },
+              tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+              legend: { data: ['销售额','利润率'], top: 30 },
+              xAxis: { type: 'category', data: ['1月','2月','3月','4月','5月','6月'] },
+              yAxis: [
+                { type: 'value', name: '销售额', position: 'left' },
+                { type: 'value', name: '利润率%', position: 'right' }
+              ],
+              series: [
+                { name: '销售额', type: 'bar', data: [200, 300, 250, 400, 350, 450] },
+                { name: '利润率', type: 'line', yAxisIndex: 1, data: [20, 28, 25, 32, 30, 35] }
+              ]
+            })
+          }
+        }
+      },
+
+      '饼图': {
+        desc: '饼图用于展示各部分占总体的比例关系',
+        items: {
+          '基础饼图': {
+            code: `// 基础饼图
+const option = {
+  title: { text: '销售来源', left: 'center' },
+  tooltip: { trigger: 'item', formatter: '{a} <br/>{b}: {c} ({d}%)' },
+  legend: { orient: 'vertical', left: 'left' },
+  series: [{
+    type: 'pie',
+    radius: '60%',
+    data: [
+      { value: 1048, name: '直销' },
+      { value: 735, name: '邮件' },
+      { value: 580, name: '搜索' },
+      { value: 484, name: '广告' },
+      { value: 300, name: '其他' }
+    ]
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '销售来源', left: 'center' },
+              tooltip: { trigger: 'item', formatter: '{a} <br/>{b}: {c} ({d}%)' },
+              legend: { orient: 'vertical', left: 'left' },
+              series: [{
+                type: 'pie',
+                radius: '60%',
+                data: [
+                  { value: 1048, name: '直销' },
+                  { value: 735, name: '邮件' },
+                  { value: 580, name: '搜索' },
+                  { value: 484, name: '广告' },
+                  { value: 300, name: '其他' }
+                ]
+              }]
+            })
+          },
+          '环形图': {
+            code: `// 环形图
+const option = {
+  title: { text: '用户设备分布', left: 'center' },
+  tooltip: { trigger: 'item' },
+  legend: { bottom: 10, left: 'center' },
+  series: [{
+    type: 'pie',
+    radius: ['40%', '70%'],
+    data: [
+      { value: 3350, name: '移动端' },
+      { value: 3100, name: '桌面端' },
+      { value: 234, name: '平板' }
+    ]
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '用户设备分布', left: 'center' },
+              tooltip: { trigger: 'item' },
+              legend: { bottom: 10, left: 'center' },
+              series: [{
+                type: 'pie',
+                radius: ['40%', '70%'],
+                data: [
+                  { value: 3350, name: '移动端' },
+                  { value: 3100, name: '桌面端' },
+                  { value: 234, name: '平板' }
+                ]
+              }]
+            })
+          },
+          '南丁格尔图': {
+            code: `// 南丁格尔图
+const option = {
+  title: { text: '功能使用率', left: 'center' },
+  tooltip: { trigger: 'item' },
+  series: [{
+    type: 'pie',
+    radius: [20, 100],
+    center: ['50%', '50%'],
+    roseType: 'area',
+    itemStyle: { borderRadius: 5 },
+    data: [
+      { value: 40, name: '搜索' },
+      { value: 33, name: '消息' },
+      { value: 28, name: '通知' },
+      { value: 22, name: '设置' },
+      { value: 20, name: '帮助' }
+    ]
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '功能使用率', left: 'center' },
+              tooltip: { trigger: 'item' },
+              series: [{
+                type: 'pie',
+                radius: [20, 100],
+                center: ['50%', '50%'],
+                roseType: 'area',
+                itemStyle: { borderRadius: 5 },
+                data: [
+                  { value: 40, name: '搜索' },
+                  { value: 33, name: '消息' },
+                  { value: 28, name: '通知' },
+                  { value: 22, name: '设置' },
+                  { value: 20, name: '帮助' }
+                ]
+              }]
+            })
+          },
+          '多层饼图': {
+            code: `// 多层饼图
+const option = {
+  title: { text: '多层级数据', left: 'center' },
+  series: [
+    {
+      type: 'pie',
+      radius: ['30%', '45%'],
+      center: ['50%', '50%'],
+      data: [
+        { value: 1048, name: '直接访问' },
+        { value: 735, name: '邮件' },
+        { value: 580, name: '联盟' },
+        { value: 484, name: '视频' },
+        { value: 300, name: '其他' }
+      ]
+    },
+    {
+      type: 'pie',
+      radius: ['15%', '25%'],
+      center: ['50%', '50%'],
+      label: { show: false },
+      data: [{ value: 1, name: 'inner' }]
+    }
+  ]
+}`,
+            getOption: () => ({
+              title: { text: '多层级数据', left: 'center' },
+              series: [
+                {
+                  type: 'pie',
+                  radius: ['30%', '45%'],
+                  center: ['50%', '50%'],
+                  data: [
+                    { value: 1048, name: '直接访问' },
+                    { value: 735, name: '邮件' },
+                    { value: 580, name: '联盟' },
+                    { value: 484, name: '视频' },
+                    { value: 300, name: '其他' }
+                  ]
+                },
+                {
+                  type: 'pie',
+                  radius: ['15%', '25%'],
+                  center: ['50%', '50%'],
+                  label: { show: false },
+                  data: [{ value: 1, name: 'inner' }]
+                }
+              ]
+            })
+          }
+        }
+      },
+
+      '散点图': {
+        desc: '散点图用于展示两个变量之间的关系和分布',
+        items: {
+          '基础散点图': {
+            code: `// 基础散点图
+const option = {
+  title: { text: '成绩分布', left: 'center' },
+  xAxis: { name: '成绩', splitLine: { lineStyle: { type: 'dashed' } } },
+  yAxis: { name: '用时(分钟)', splitLine: { lineStyle: { type: 'dashed' } } },
+  series: [{
+    type: 'scatter',
+    symbolSize: 12,
+    data: [
+      [85, 45], [92, 38], [78, 52], [65, 60], [88, 42],
+      [95, 35], [70, 48], [82, 40], [90, 30], [75, 55]
+    ]
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '成绩分布', left: 'center' },
+              xAxis: { name: '成绩', splitLine: { lineStyle: { type: 'dashed' } } },
+              yAxis: { name: '用时(分钟)', splitLine: { lineStyle: { type: 'dashed' } } },
+              series: [{ type: 'scatter', symbolSize: 12, data: [[85,45],[92,38],[78,52],[65,60],[88,42],[95,35],[70,48],[82,40],[90,30],[75,55]] }]
+            })
+          },
+          '气泡图': {
+            code: `// 气泡图
+const option = {
+  title: { text: '各省份数据对比', left: 'center' },
+  xAxis: { name: 'GDP(万亿)' },
+  yAxis: { name: '人口(百万)' },
+  series: [{
+    type: 'scatter',
+    data: [
+      [11.6, 1250, 50],
+      [10.5, 2200, 80],
+      [9.8, 1500, 60],
+      [8.4, 1000, 40],
+      [6.5, 800, 30]
+    ],
+    symbolSize: function(data) { return data[2]; },
+    itemStyle: { color: '#5470c6' }
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '各省份数据对比', left: 'center' },
+              xAxis: { name: 'GDP(万亿)' },
+              yAxis: { name: '人口(百万)' },
+              series: [{
+                type: 'scatter',
+                data: [
+                  [11.6, 1250, 50],
+                  [10.5, 2200, 80],
+                  [9.8, 1500, 60],
+                  [8.4, 1000, 40],
+                  [6.5, 800, 30]
+                ],
+                symbolSize: function(data) { return data[2]; },
+                itemStyle: { color: '#5470c6' }
+              }]
+            })
+          },
+          '涟漪散点图': {
+            code: `// 涟漪散点图 (需要地图)
+// 这个示例需要先加载并注册中国地图
+// 请参考 map-demo.html 完整示例
+const option = {
+  title: { text: '热点城市示例', left: 'center' },
+  xAxis: { type: 'category', data: ['北京','上海','广州','深圳','杭州'] },
+  yAxis: { type: 'value' },
+  series: [{
+    type: 'effectScatter',
+    coordinateSystem: 'cartesian2d',
+    data: [120, 200, 150, 80, 70],
+    symbolSize: 20
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '热点城市示例', left: 'center' },
+              xAxis: { type: 'category', data: ['北京','上海','广州','深圳','杭州'] },
+              yAxis: { type: 'value' },
+              series: [{
+                type: 'effectScatter',
+                coordinateSystem: 'cartesian2d',
+                data: [120, 200, 150, 80, 70],
+                symbolSize: 20
+              }]
+            })
+          }
+        }
+      },
+
+      '其他图表': {
+        desc: '更多有用的图表类型',
+        items: {
+          '仪表盘': {
+            code: `// 仪表盘
+const option = {
+  title: { text: '完成率', left: 'center' },
+  series: [{
+    type: 'gauge',
+    min: 0,
+    max: 100,
+    detail: {
+      valueAnimation: true,
+      formatter: '{value}%',
+      fontSize: 24
+    },
+    data: [{ value: 72 }]
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '完成率', left: 'center' },
+              series: [{
+                type: 'gauge',
+                min: 0,
+                max: 100,
+                detail: {
+                  valueAnimation: true,
+                  formatter: '{value}%',
+                  fontSize: 24
+                },
+                data: [{ value: 72 }]
+              }]
+            })
+          },
+          '漏斗图': {
+            code: `// 漏斗图
+const option = {
+  title: { text: '转化漏斗', left: 'center' },
+  series: [{
+    type: 'funnel',
+    left: '10%',
+    width: '80%',
+    label: { show: true, formatter: '{b}: {c}%' },
+    data: [
+      { value: 100, name: '访问' },
+      { value: 80, name: '浏览' },
+      { value: 60, name: '加购' },
+      { value: 40, name: '下单' },
+      { value: 20, name: '支付' }
+    ]
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '转化漏斗', left: 'center' },
+              series: [{
+                type: 'funnel',
+                left: '10%',
+                width: '80%',
+                label: { show: true, formatter: '{b}: {c}%' },
+                data: [
+                  { value: 100, name: '访问' },
+                  { value: 80, name: '浏览' },
+                  { value: 60, name: '加购' },
+                  { value: 40, name: '下单' },
+                  { value: 20, name: '支付' }
+                ]
+              }]
+            })
+          },
+          '矩形树图': {
+            code: `// 矩形树图
+const option = {
+  title: { text: '文件大小分布', left: 'center' },
+  series: [{
+    type: 'treemap',
+    visibleMin: 300,
+    label: { show: true, formatter: '{b}' },
+    data: [
+      { value: 100, name: 'src' },
+      { value: 50, name: 'doc' },
+      { value: 30, name: 'test' },
+      { value: 20, name: 'build' }
+    ]
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '文件大小分布', left: 'center' },
+              series: [{
+                type: 'treemap',
+                visibleMin: 300,
+                label: { show: true, formatter: '{b}' },
+                data: [
+                  { value: 100, name: 'src' },
+                  { value: 50, name: 'doc' },
+                  { value: 30, name: 'test' },
+                  { value: 20, name: 'build' }
+                ]
+              }]
+            })
+          },
+          '热力图': {
+            code: `// 热力图
+const option = {
+  title: { text: '工作时长热力图', left: 'center' },
+  tooltip: { position: 'top' },
+  xAxis: { type: 'category', data: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] },
+  yAxis: { type: 'category', data: ['Morning','Noon','Afternoon','Evening'] },
+  visualMap: {
+    min: 0,
+    max: 10,
+    calculable: true,
+    orient: 'horizontal',
+    left: 'center',
+    bottom: 0
+  },
+  series: [{
+    type: 'heatmap',
+    data: [
+      [0,0,5], [0,1,8], [0,2,3], [0,3,6], [0,4,4], [0,5,2], [0,6,7],
+      [1,0,6], [1,1,9], [1,2,5], [1,3,7], [1,4,3], [1,5,1], [1,6,8],
+      [2,0,4], [2,1,6], [2,2,2], [2,3,8], [2,4,5], [2,5,3], [2,6,9],
+      [3,0,7], [3,1,5], [3,2,4], [3,3,9], [3,4,6], [3,5,2], [3,6,3]
+    ]
+  }]
+}`,
+            getOption: () => ({
+              title: { text: '工作时长热力图', left: 'center' },
+              tooltip: { position: 'top' },
+              xAxis: { type: 'category', data: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] },
+              yAxis: { type: 'category', data: ['Morning','Noon','Afternoon','Evening'] },
+              visualMap: { min: 0, max: 10, calculable: true, orient: 'horizontal', left: 'center', bottom: 0 },
+              series: [{ type: 'heatmap', data: [[0,0,5],[0,1,8],[0,2,3],[0,3,6],[0,4,4],[0,5,2],[0,6,7],[1,0,6],[1,1,9],[1,2,5],[1,3,7],[1,4,3],[1,5,1],[1,6,8],[2,0,4],[2,1,6],[2,2,2],[2,3,8],[2,4,5],[2,5,3],[2,6,9],[3,0,7],[3,1,5],[3,2,4],[3,3,9],[3,4,6],[3,5,2],[3,6,3]] }]
+            })
+          }
+        }
+      }
+    };
+
+    let chart = null;
+    let currentKey = null;
+
+    function initNav() {
+      const navContainer = document.getElementById('nav-container');
+      Object.keys(CHART_TYPES).forEach((category) => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'nav-group';
+        groupDiv.textContent = category;
+        navContainer.appendChild(groupDiv);
+
+        Object.keys(CHART_TYPES[category].items).forEach((itemName) => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'nav-item';
+          itemDiv.dataset.category = category;
+          itemDiv.dataset.item = itemName;
+          itemDiv.textContent = itemName;
+          itemDiv.addEventListener('click', () => selectChart(category, itemName));
+          navContainer.appendChild(itemDiv);
+        });
+      });
+    }
+
+    function selectChart(category, itemName) {
+      const config = CHART_TYPES[category].items[itemName];
+      const key = category + '|' + itemName;
+
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll(`[data-category="${category}"][data-item="${itemName}"]`).forEach(el => el.classList.add('active'));
+
+      document.getElementById('chart-name').textContent = itemName;
+      document.getElementById('preview-title').textContent = config.title || itemName;
+      document.getElementById('preview-desc').textContent = CHART_TYPES[category].desc;
+      document.getElementById('code-editor').value = config.code;
+
+      currentKey = key;
+      renderChart();
+    }
+
+    function renderChart() {
+      if (!currentKey) return;
+      const [category, itemName] = currentKey.split('|');
+      const config = CHART_TYPES[category].items[itemName];
+      const editor = document.getElementById('code-editor');
+      let userCode = editor.value;
+
+      try {
+        const fn = new Function(userCode + '\nreturn option;');
+        const option = fn();
+
+        if (!chart) {
+          chart = echarts.init(document.getElementById('chart'));
+        }
+        chart.setOption(option, true);
+        hideError();
+      } catch (e) {
+        showError('代码错误: ' + e.message);
+        console.error(e);
+      }
+    }
+
+    function debounce(fn, delay) {
+      let timer = null;
+      return function () {
+        clearTimeout(timer);
+        timer = setTimeout(fn, delay);
+      };
+    }
+
+    function showError(msg) {
+      document.getElementById('error').textContent = msg;
+      document.getElementById('error').style.display = 'block';
+    }
+
+    function hideError() {
+      document.getElementById('error').style.display = 'none';
+    }
+
+    initNav();
+
+    const firstCategory = Object.keys(CHART_TYPES)[0];
+    const firstItem = Object.keys(CHART_TYPES[firstCategory].items)[0];
+    selectChart(firstCategory, firstItem);
+
+    document.getElementById('code-editor').addEventListener('input', debounce(renderChart, 500));
+
+    window.addEventListener('resize', () => {
+      chart && chart.resize();
+    });
+  </script>
+</body>
+</html>
