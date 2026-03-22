@@ -14,6 +14,10 @@ export default defineUserConfig({
         link: '/'
       },
       {
+        text: '博客',
+        link: '/blog/'
+      },
+      {
         text: '指南',
         children: [
           {
