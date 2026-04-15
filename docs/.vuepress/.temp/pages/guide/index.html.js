@@ -1,3 +1,16 @@
-import comp from "C:/Users/Administrator/.openclaw/workspace/vuepress-site/docs/.vuepress/.temp/pages/guide/index.html.vue"
+import comp from "C:/open-claw-workspace/vuepress-site/docs/.vuepress/.temp/pages/guide/index.html.vue"
 const data = JSON.parse("{\"path\":\"/guide/\",\"title\":\"指南\",\"lang\":\"zh-CN\",\"frontmatter\":{},\"git\":{\"updatedTime\":1773998473000,\"contributors\":[{\"name\":\"周炜\",\"username\":\"\",\"email\":\"zw314301.jx@chinatelecom.cn\",\"commits\":2}],\"changelog\":[{\"hash\":\"3882c17d0b0dc0c24eee25c64d769334f81fc602\",\"time\":1773998473000,\"email\":\"zw314301.jx@chinatelecom.cn\",\"author\":\"周炜\",\"message\":\"feat: 新增完整的 ECharts 示例集和 TinyChart 交互式演示\"},{\"hash\":\"90709e8dfbf8a2c1b2452507bc8f4cab9ed9cae2\",\"time\":1773966443000,\"email\":\"zw314301.jx@chinatelecom.cn\",\"author\":\"周炜\",\"message\":\"Initial commit: VuePress 2 site with default theme\"}]},\"filePathRelative\":\"guide/README.md\"}")
 export { comp, data }
+
+if (import.meta.webpackHot) {
+  import.meta.webpackHot.accept()
+  if (__VUE_HMR_RUNTIME__.updatePageData) {
+    __VUE_HMR_RUNTIME__.updatePageData(data)
+  }
+}
+
+if (import.meta.hot) {
+  import.meta.hot.accept(({ data }) => {
+    __VUE_HMR_RUNTIME__.updatePageData(data)
+  })
+}

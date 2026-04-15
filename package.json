@@ -4,17 +4,18 @@
   "description": "A VuePress 2 site",
   "scripts": {
     "dev": "vuepress dev docs",
-    "build": "vuepress build docs",
+    "build": "npm run gen:blog-index && vuepress build docs",
+    "gen:blog-index": "node generate-index.js",
     "preview": "vuepress preview docs"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "devDependencies": {
     "@vuepress/bundler-vite": "^2.0.0-rc.5",
     "@vuepress/theme-default": "^2.0.0-rc.5",
     "sass-embedded": "^1.98.0",
     "vite": "^5.4.21",
     "vuepress": "^2.0.0-rc.5"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  }
 }
